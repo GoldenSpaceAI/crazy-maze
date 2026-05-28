@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Colorful Maze Escape - Spike Pro Max</title>
+    
+    <!-- PWA Support - Added for installable app -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Maze Escape">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23000000'/><text x='50' y='67' font-size='50' text-anchor='middle' fill='%23FFD700'>🎮</text></svg>">
+    
+    <style>
+        :root {
+            --gold: #FFD700;
+            --bg: #000000;
+            --panel: rgba(10, 10, 15, 0.98);
+            --premium: #ff00ff;
+            --golden: #fff700;
+            --spike: #ff0000;
+            --neon-blue: #00f2ff;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg); 
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; touch-action: none;
+        }
+
+        .menu-screen {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--panel); padding: 25px;
+            border: 3px solid var(--gold); border-radius: 20px;
+            text-align: center; box-shadow: 0 0 60px rgba(0, 242, 255, 0.2);
+            z-index: 1000; width: 85%; max-width: 450px;
+            max-height: 85vh; overflow-y: auto; backdrop-filter: blur(15px);
+        }
+
+        .menu-screen h1 {
+            color: var(--gold); margin-top: 0;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            font-size: 2.2rem; letter-spacing: -1px;
+        }
+
+        #ui-layer {
+            position: absolute; top: 10px; width: 95%;
+            max-width: 1000px; display: none; 
+            flex-direction: column; gap: 5px; z-index: 100;
+        }
+
+        .hud-main { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+
+        #ui-title { font-size: 1.2rem; margin: 0; color: var(--neon-blue); font-weight: bold; text-shadow: 0 0 10px var(--neon-blue); }
+
+        canvas {
+            background-color: #000; border: 2px solid #222;
+            border-radius: 15px; box-shadow: 0 0 50px rgba(0, 0, 0, 1);
+            display: none; max-width: 98vw; max-height: 75vh;
+            touch-action: none; z-index: 1;
+        }
+
+        button {
+            background: linear-gradient(180deg, rgba(255,215,0,0.2) 0%, rgba(255,215,0,0) 100%);
+            color: var(--gold); border: 2px solid var(--gold);
+            padding: 12px 20px; font-size: 1rem; cursor: pointer;
+            border-radius: 12px; transition: 0.2s; margin: 5px;
+            display: inline-block; font-weight: bold; text-transform: uppercase;
+        }
+
+        button:active { transform: scale(0.92); background: var(--gold); color: #000; }
+        .level-btn { display: block; width: 90%; margin: 10px auto; }
+
+        #currency-display { color: #FFD700; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        .coin-icon { width: 20px; height: 20px; background: var(--gold); border-radius: 50%; display: inline-block; box-shadow: 0 0 10px var(--gold);}
+
+        .char-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 12px; margin-top: 10px; padding: 10px;
+            background: rgba(0,0,0,0.5); border-radius: 15px;
+        }
+        .char-item {
+            font-size: 2rem; padding: 12px; border: 2px solid transparent;
+            border-radius: 12px; cursor: pointer; transition: 0.2s;
+            background: rgba(255,255,255,0.02); display: flex; justify-content: center; align-items: center;
+        }
+        .char-item.owned { border-color: rgba(255,255,255,0.1); }
+        .char-item.selected { border-color: var(--gold); background: rgba(255, 215, 0, 0.2); transform: scale(1.1); }
+        .char-item.locked { opacity: 0.2; filter: grayscale(1); }
+        .char-item.is-premium.selected { border-color: var(--premium); background: rgba(255, 0, 255, 0.2); }
+        .char-item.is-golden { background: radial-gradient(circle, #443300 0%, #000 100%); }
+        .char-item.is-golden.selected { border-color: var(--golden); box-shadow: 0 0 15px var(--golden); }
+
+        .shop-section-title {
+            color: var(--gold); font-size: 1.1rem; font-weight: bold;
+            text-align: left; margin: 20px 0 10px 10px;
+            display: flex; justify-content: space-between;
+        }
+
+        #death-wall {
+            position: fixed; top: 0; left: 0; height: 100vh; width: 0;
+            background: repeating-linear-gradient(-45deg, #700, #700 25px, #c00 25px, #c00 50px);
+            border-right: 15px solid #f00; z-index: 20; 
+            display: none; pointer-events: none;
+            box-shadow: 20px 0 80px rgba(255,0,0,0.8);
+        }
+
+        #timer-bar-container {
+            width: 100%; height: 12px; background: rgba(255,255,255,0.1);
+            display: none; border-radius: 6px; overflow: hidden; margin-top: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        #timer-bar { height: 100%; background: var(--neon-blue); width: 0%; border-radius: 6px; transition: width 0.1s linear;}
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div class="hud-main">
+            <div>
+                <h1 id="ui-title">MAZE</h1>
+                <span id="level-display" style="font-size: 0.8rem; color: #aaa; font-weight: bold;"></span>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div id="currency-display"><span class="coin-icon"></span> <span id="coin-count">0</span></div>
+                <button class="small-btn" style="margin:0; padding: 5px 12px; font-size: 0.7rem;" onclick="showMainMenu()">Menu</button>
+            </div>
+        </div>
+        <div id="timer-bar-container"><div id="timer-bar"></div></div>
+    </div>
+
+    <div id="main-menu" class="menu-screen">
+        <h1>MAZE TYCOON</h1>
+        <p>Master the lanes. Survive the pulse.</p>
+        <button onclick="startRandom()" class="level-btn">Survival Mode (60s)</button>
+        <button onclick="startRush()" class="level-btn" style="border-color: #ff3333; color: #ff3333;">Spike Rush (200¢ Prize)</button>
+        <button onclick="startFlappy()" class="level-btn" style="border-color: #33ff33; color: #33ff33;">Flappy Maze (100¢ Prize)</button>
+        <button onclick="showLevels()" class="level-btn">Quest Levels</button>
+        <button onclick="showCharacterShop()" class="level-btn">Character Shop</button>
+        <div style="margin-top: 15px; font-size: 0.9rem; color: #888;">Balance: <span id="menu-coin-count">0</span>¢</div>
+    </div>
+
+    <div id="shop-menu" class="menu-screen" style="display:none;">
+        <h2>Store</h2>
+        <div class="shop-section-title" style="color:var(--golden)">Golden <span>1000¢</span></div>
+        <div id="char-list-golden" class="char-grid"></div>
+
+        <div class="shop-section-title" style="color:var(--premium)">Premium <span>200¢</span></div>
+        <div id="char-list-premium" class="char-grid"></div>
+
+        <div class="shop-section-title">Standard <span>75¢</span></div>
+        <div id="char-list-standard" class="char-grid"></div>
+        
+        <button class="level-btn" style="border-color: #888; color: #888; margin-top:20px;" onclick="showMainMenu()">Back</button>
+    </div>
+
+    <div id="levels-menu" class="menu-screen" style="display:none;">
+        <h2>Quest List</h2>
+        <button class="level-btn" onclick="startLevel(1)">1 - Rookie (40¢)</button>
+        <button class="level-btn" onclick="startLevel(2)">2 - Skilled (120¢)</button>
+        <button class="level-btn" onclick="startLevel(3)">3 - Pro (300¢)</button>
+        <button class="level-btn" onclick="startLevel(4)">4 - Master (600¢)</button>
+        <button class="level-btn" onclick="startLevel(5)">5 - Legend (1500¢)</button>
+        <button class="level-btn" style="border-color: #888; color: #888;" onclick="showMainMenu()">Back</button>
+    </div>
+
+    <canvas id="mazeCanvas" width="600" height="600"></canvas>
+    <div id="death-wall"></div>
+
+    <div id="win-screen" class="menu-screen" style="display:none;">
+        <h2 id="win-header">VICTORY!</h2>
+        <div id="reward-box" style="margin-bottom: 20px; font-size: 2rem; color: var(--gold); font-weight: bold;">+<span id="reward-amt">0</span>¢</div>
+        <div id="win-buttons"></div>
+    </div>
+
+    <div id="lose-screen" class="menu-screen" style="display:none; border-color: #ff0000;">
+        <h2 style="color: #ff0000;" id="lose-header">TERMINATED</h2>
+        <p id="lose-text">Caught by the spikes.</p>
+        <button onclick="retryGame()" style="border-color: #ff0000; color: #ff0000;">Try Again</button>
+        <button style="border-color: #888; color: #888;" onclick="showMainMenu()">Quit</button>
+    </div>
+
+    <script>
+        // PWA Service Worker Registration - Added for offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('sw.js').then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(f, t, d, s, v = 0.1) {
+            const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            o.type = t; o.frequency.setValueAtTime(f, s); g.gain.setValueAtTime(v, s);
+            g.gain.exponentialRampToValueAtTime(0.0001, s + d);
+            o.connect(g); g.connect(audioCtx.destination); o.start(s); o.stop(s + d);
+        }
+
+        function playEmojiSound(e) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime;
+            if ("👑💎🔱📀🏆💰✨🌟🏵️🌈".includes(e)) { playTone(1300, 'sine', 0.1, now, 0.05); } 
+            else { playTone(850, 'sine', 0.05, now, 0.05); }
+        }
+
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const winScreen = document.getElementById('win-screen');
+        const loseScreen = document.getElementById('lose-screen');
+        const mainMenu = document.getElementById('main-menu');
+        const shopMenu = document.getElementById('shop-menu');
+        const levelsMenu = document.getElementById('levels-menu');
+        const uiLayer = document.getElementById('ui-layer');
+        const uiTitle = document.getElementById('ui-title');
+        const deathWallOverlay = document.getElementById('death-wall');
+        const timerBar = document.getElementById('timer-bar');
+        const timerContainer = document.getElementById('timer-bar-container');
+        const coinDisplay = document.getElementById('coin-count');
+        const menuCoinDisplay = document.getElementById('menu-coin-count');
+        const charLists = {
+            standard: document.getElementById('char-list-standard'),
+            premium: document.getElementById('char-list-premium'),
+            golden: document.getElementById('char-list-golden')
+        };
+
+        let coins = parseInt(localStorage.getItem('mz_coins')) || 0;
+        let ownedChars = JSON.parse(localStorage.getItem('mz_owned')) || ['🚀'];
+        let selectedChar = localStorage.getItem('mz_current') || '🚀';
+
+        const GOLDEN_EMOJIS = ["👑","💎","🔱","📀","🏆","💰","✨","🌟","🏵️","🌈"];
+        const PREMIUM_EMOJIS = ["🔥","⚡","🌀","👾","🤖","👽","👻","👹","👺","🐉","🐲","🦄","🧿","🔮","🧪","🧬","🌋","🌪️","🌊","🧨"];
+        const STANDARD_EMOJIS = [
+            "🚀","🛸","🛰️","🪐","🌓","☄️","🐱","🐶","🦊","🐯","🐸","🐵","🐧","🐤","🦉","🐝","🦋","🐢","🍄","🌻","🍀","🍁","🍒","🍓","🍍","🥥","🥑","🥨","🥯"," sushi","⚽","🏀","🎾","🎱","🎳","♟️","🏹","🥊","🏂","🧗","🚴","🏰","⛩️","🗽","🗼","🏔️"," desert","🧭","⏰","🔋","🧱","🧲","💣","🛡️","🗝️","🎁","🎊","🎈","🧸","🖼️","🎨","🧵","🧶","🛒","👓","🎭","🎬","🎤","🎧","🎷","🎸","🎹","🎺","🎻","🥁","📱","💻","🔌","💡","🔦","🕯️","📚","📖","🔖","💸","✉️","📦","✏️","✒️","📏","📐","✂️","📌","📍","🔨","🪓","⛏️","⚒️","🛠️","⛓️","🪜","🧼","🪠","🚿","🛁","🛀","🪒","🧺","🧻","🧽","🧹","🧺","🧦","🧤","🧣","🎩","🧢","👒","🎓","👝","👛","👜","💼","🎒","👞","👟","🥾","🥿","👠","👡","👢","👗","👘","🥻","🧥","👚"," shirts","👖","👔","👗","👙","💄","💍","🌂","⛱️","🌵","🌲","🌳","🌴","🌱","🌿","☘️","🍀","🎍","🎋","🍃","🍂","🍁","🌾","💐","🌷","🌹","🥀","🌺","🌸","🌼","🌻","🌞","🌝","🌛","🌜","🌚","🌕","🌖","🌗","🌘","🌑","🌒","🌓","🌔","🌙","🌎","🌍","🌏","🪐","💫","⭐️","🌟","✨","⚡️","☄️","💥","🔥","🌪️","🌈","☀️","🌤️","⛅️","🌥️","☁️","🌦️","🌧️","⛈️","🌩️","🌨️","❄️","☃️","⛄️","🌬️","💨","💧","💦","☔️","☂️","🌊","🌫️","🍎","🍏","🍐","🍊","🍋","🍌","🍉","🍇","🫐","🍈","🍐","🍑","🥭","🥥","🥝","トマト","ナス","アボカド","ブロッコリー","🥬","Cucumber","🌶️","Corn","Carrot","🫒","🧄","🧅","Potato","Sweet Potato","🥐","🥯","Bread","Baguette","🥨","Cheese","Egg","Fried Egg","Butter","Pancake","Waffle","Bacon","Steak","Chicken","Meat","Bone","Hotdog","Burger","Fries","Pizza","Sandwich","Taco","Burrito","🫔","Salad","🥘","Pot","🫕","Bowl","Salad","Popcorn","Butter","Salt","Can","Bento","Rice Cracker","Onigiri","Rice","Curry","Noodle","Pasta","Sweet Potato","Oden","Sushi","Shrimp","🍥","Mooncake","Dango","Dumpling","Fortune Cookie","Takeout","Oyster","Ice Cream","Shaved Ice","Gelato","Donut","Cookie","Cake","Shortcake","Cupcake","Pie","Chocolate","Candy","Lollipop","Custard","Honey","Baby Bottle","Milk","Coffee","Tea","Juice","Soda","Bubble Tea","Sake","Beer","Beers","Champagne","Wine","Whisky","Cocktail","Tropical Drink"
+        ];
+
+        let cols, rows, w, grid = [], player = { c: 0, r: 0, x: 0, v: 0, y: 0 }, goal = { c: 0, r: 0 }, gameMode = 'MENU', activeModeType = ''; 
+        let currentLevel = 1, startTime = 0, deathWallScreenX = 0, themeWall, themeGoal, themePath, rushTick = 0, rushSpeed = 4.6, rushObstacles = [], bordersPassed = 0;
+
+        function saveState() {
+            localStorage.setItem('mz_coins', coins);
+            localStorage.setItem('mz_owned', JSON.stringify(ownedChars));
+            localStorage.setItem('mz_current', selectedChar);
+            if(coinDisplay) coinDisplay.innerText = coins;
+            if(menuCoinDisplay) menuCoinDisplay.innerText = coins;
+        }
+
+        function hideAllScreens() {
+            [mainMenu, levelsMenu, shopMenu, winScreen, loseScreen, canvas, uiLayer, deathWallOverlay, timerContainer].forEach(el => { if(el) el.style.display = 'none'; });
+        }
+
+        function showMainMenu() { gameMode = 'MENU'; hideAllScreens(); mainMenu.style.display = 'block'; saveState(); }
+        function showLevels() { hideAllScreens(); levelsMenu.style.display = 'block'; }
+        function showCharacterShop() { hideAllScreens(); shopMenu.style.display = 'block'; renderShop(); }
+
+        function renderShop() {
+            charLists.standard.innerHTML = ''; charLists.premium.innerHTML = ''; charLists.golden.innerHTML = '';
+            GOLDEN_EMOJIS.forEach(e => createShopItem(e, 1000, charLists.golden, false, true));
+            PREMIUM_EMOJIS.forEach(e => createShopItem(e, 200, charLists.premium, true));
+            STANDARD_EMOJIS.forEach(e => createShopItem(e, 75, charLists.standard));
+        }
+
+        function createShopItem(emoji, cost, container, isPremium = false, isGolden = false) {
+            const isOwned = ownedChars.includes(emoji);
+            const div = document.createElement('div');
+            div.className = `char-item ${isOwned ? 'owned' : 'locked'} ${selectedChar === emoji ? 'selected' : ''} ${isPremium ? 'is-premium' : ''} ${isGolden ? 'is-golden' : ''}`;
+            div.innerText = emoji;
+            div.onclick = () => {
+                if (isOwned) { selectedChar = emoji; saveState(); renderShop(); }
+                else if (coins >= cost) { coins -= cost; ownedChars.push(emoji); selectedChar = emoji; saveState(); renderShop(); }
+            };
+            container.appendChild(div);
+        }
+
+        function startRandom() {
+            activeModeType = 'RANDOM'; resetEverything(); gameMode = 'RANDOM'; applyTheme('RANDOM');
+            setupGame(15, 15, "Survival Mode");
+            deathWallOverlay.style.display = 'block'; timerContainer.style.display = 'block';
+        }
+
+        function startRush() {
+            activeModeType = 'RUSH'; resetEverything(); gameMode = 'RUSH'; applyTheme('RUSH');
+            for (let i = 1; i < 90; i++) rushObstacles.push({ dist: i * 420, opening: Math.floor(Math.random() * 3) });
+            setupGame(10, 3, "Rush Mode");
+            player = { c: 5, r: 1, x: 300, v: 0 }; timerContainer.style.display = 'block';
+        }
+
+        function startFlappy() {
+            activeModeType = 'FLAPPY'; resetEverything(); gameMode = 'FLAPPY'; applyTheme('FLAPPY');
+            bordersPassed = 0;
+            for (let i = 1; i < 20; i++) {
+                let gapSize = 180;
+                let gapY = 150 + Math.random() * (canvas.height - 300);
+                rushObstacles.push({ dist: i * 400 + 300, gapY: gapY, gapSize: gapSize, passed: false });
+            }
+            setupGame(10, 3, "Flappy Maze");
+            player = { x: 150, y: canvas.height / 2, v: 0 }; 
+            timerContainer.style.display = 'block';
+        }
+
+        function startLevel(lvl) {
+            activeModeType = 'CAMPAIGN'; currentLevel = lvl; resetEverything(); gameMode = 'CAMPAIGN'; applyTheme('LEVEL');
+            let s = [0, 10, 15, 22, 32, 45][lvl]; setupGame(s, s, `Level ${lvl}`);
+        }
+
+        function resetEverything() {
+            startTime = Date.now(); rushTick = 0; rushObstacles = []; deathWallScreenX = 0;
+            deathWallOverlay.style.width = '0px'; deathWallOverlay.style.display = 'none';
+            timerBar.style.width = '0%'; if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function setupGame(c, r, titleText) {
+            hideAllScreens(); canvas.style.display = 'block'; uiLayer.style.display = 'flex';
+            document.getElementById('level-display').innerText = titleText;
+            cols = c; rows = r; w = canvas.width / (['RUSH','FLAPPY'].includes(gameMode) ? 10 : cols);
+            grid = [];
+            for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) grid.push({ c: x, r: y, walls: [true, true, true, true], visited: false });
+            if (!['RUSH','FLAPPY'].includes(gameMode)) { generateMaze(); player = { c: 0, r: 0, x: w/2 }; goal = { c: cols - 1, r: rows - 1 }; }
+        }
+
+        function applyTheme(mode) {
+            themeWall = '#FFFFFF'; themeGoal = '#00f2ff'; themePath = '#000';
+            uiTitle.innerText = mode === 'RUSH' ? "SPIKE RUSH" : (mode === 'FLAPPY' ? "FLAPPY MAZE" : "MAZE TYCOON");
+        }
+
+        function generateMaze() {
+            let stack = []; let current = grid[0]; current.visited = true;
+            while(true) {
+                let neighbors = [];
+                let t = grid[idx(current.c, current.r-1)], r = grid[idx(current.c+1, current.r)], b = grid[idx(current.c, current.r+1)], l = grid[idx(current.c-1, current.r)];
+                if (t && !t.visited) neighbors.push(t); if (r && !r.visited) neighbors.push(r); if (b && !b.visited) neighbors.push(b); if (l && !l.visited) neighbors.push(l);
+                if (neighbors.length > 0) {
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    next.visited = true; stack.push(current);
+                    let dx = current.c - next.c, dy = current.r - next.r;
+                    if(dx===1){current.walls[3]=false;next.walls[1]=false;}else if(dx===-1){current.walls[1]=false;next.walls[3]=false;}
+                    if(dy===1){current.walls[0]=false;next.walls[2]=false;}else if(dy===-1){current.walls[2]=false;next.walls[0]=false;}
+                    current = next;
+                } else if (stack.length > 0) current = stack.pop(); else break;
+            }
+        }
+        function idx(c, r) { return (c < 0 || r < 0 || c >= cols || r >= rows) ? -1 : c + r * cols; }
+
+        function gameLoop() {
+            if (['RANDOM', 'CAMPAIGN', 'RUSH', 'FLAPPY'].includes(gameMode)) {
+                let elapsed = Date.now() - startTime;
+                let rushDuration = (gameMode === 'RUSH' || gameMode === 'FLAPPY') ? 30000 : 60000;
+                let progress = Math.min(elapsed / rushDuration, 1);
+                timerBar.style.width = (progress * 100) + '%';
+
+                if (gameMode === 'RUSH') {
+                    rushTick += rushSpeed; player.x -= 1.5;
+                    if (player.x < 50) loseGame("SPIKED", "The grid consumed you.");
+                    rushObstacles.forEach(obs => {
+                        let ox = obs.dist - rushTick;
+                        if (player.x > ox - 30 && player.x < ox + 20 && player.r !== obs.opening) loseGame("CRASHED", "You hit a laser wall!");
+                    });
+                    if (progress >= 1) winGame(200);
+                } else if (gameMode === 'FLAPPY') {
+                    rushTick += 3.5;
+                    player.v += 0.38; // gravity
+                    player.y += player.v;
+                    
+                    if (player.y < 0 || player.y > canvas.height) loseGame("CRASHED", "Out of bounds!");
+                    
+                    rushObstacles.forEach(obs => {
+                        let ox = obs.dist - rushTick;
+                        let halfGap = obs.gapSize / 2;
+                        if (player.x > ox - 40 && player.x < ox + 40) {
+                            if (player.y < obs.gapY - halfGap || player.y > obs.gapY + halfGap) {
+                                loseGame("CRASHED", "You hit the pipe!");
+                            }
+                        }
+                        if (!obs.passed && ox < player.x) {
+                            obs.passed = true;
+                            bordersPassed++;
+                            if (bordersPassed >= 10) winGame(100);
+                        }
+                    });
+                } else if (gameMode === 'RANDOM') {
+                    let rect = canvas.getBoundingClientRect();
+                    // Anchor to full screen
+                    deathWallOverlay.style.left = '0px';
+                    deathWallOverlay.style.top = '0px';
+                    deathWallOverlay.style.height = '100vh';
+                    
+                    // The wall's progress is relative to the total screen width
+                    let wallRightEdge = progress * window.innerWidth;
+                    deathWallOverlay.style.width = wallRightEdge + 'px';
+                    
+                    // Collision Check: Find player center relative to screen
+                    let playerCenterXOnScreen = rect.left + (player.c * w + w/2);
+                    
+                    // Trigger lose if wall right edge reaches player center
+                    if (wallRightEdge >= playerCenterXOnScreen) {
+                        loseGame("CAUGHT", "The pulse reached you.");
+                    }
+                }
+                draw();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function draw() {
+            ctx.fillStyle = themePath; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (gameMode === 'FLAPPY') {
+                ctx.strokeStyle = "rgba(255,255,255,0.05)";
+                ctx.lineWidth = 2;
+                for(let i=0; i<canvas.width; i+=50) {
+                    let offset = (i - (rushTick % 50));
+                    ctx.beginPath(); ctx.moveTo(offset, 0); ctx.lineTo(offset, canvas.height); ctx.stroke();
+                }
+                rushObstacles.forEach(obs => {
+                    let ox = obs.dist - rushTick;
+                    if (ox < -100 || ox > canvas.width + 100) return;
+                    ctx.fillStyle = obs.passed ? "rgba(0, 255, 0, 0.3)" : "rgba(255, 255, 255, 0.1)";
+                    ctx.strokeStyle = obs.passed ? "#0f0" : "#00f2ff";
+                    ctx.lineWidth = 4;
+                    let halfGap = obs.gapSize / 2;
+                    ctx.strokeRect(ox - 30, -10, 60, obs.gapY - halfGap + 10);
+                    ctx.strokeRect(ox - 30, obs.gapY + halfGap, 60, canvas.height - (obs.gapY + halfGap) + 10);
+                });
+            } else if (gameMode === 'RUSH') {
+                ctx.fillStyle = "#ff0000";
+                for(let i=0; i<canvas.height; i+=30) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(50, i+15); ctx.lineTo(0, i+30); ctx.fill(); }
+                ctx.strokeStyle = "rgba(0,242,255,0.1)"; ctx.lineWidth = 4;
+                for(let i=1; i<3; i++) { ctx.beginPath(); ctx.moveTo(0, i*(canvas.height/3)); ctx.lineTo(canvas.width, i*(canvas.height/3)); ctx.stroke(); }
+                ctx.lineWidth = 14; ctx.shadowBlur = 20; rushObstacles.forEach(obs => {
+                    let ox = obs.dist - rushTick; if (ox < -100 || ox > canvas.width + 100) return;
+                    ctx.strokeStyle = "#fff"; ctx.shadowColor = "#00f2ff"; ctx.beginPath();
+                    for(let i=0; i<3; i++) if (i !== obs.opening) { ctx.moveTo(ox, i*(canvas.height/3) + 5); ctx.lineTo(ox, (i+1)*(canvas.height/3) - 5); }
+                    ctx.stroke();
+                });
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = cols < 15 ? 10 : 6; ctx.lineCap = 'round'; ctx.shadowBlur = 15; ctx.shadowColor = "#00f2ff";
+                ctx.beginPath(); grid.forEach(cell => {
+                    let x = cell.c * w, y = cell.r * w;
+                    if (cell.walls[0]) { ctx.moveTo(x, y); ctx.lineTo(x + w, y); }
+                    if (cell.walls[1]) { ctx.moveTo(x + w, y); ctx.lineTo(x + w, y + w); }
+                    if (cell.walls[2]) { ctx.moveTo(x + w, y + w); ctx.lineTo(x, y + w); }
+                    if (cell.walls[3]) { ctx.moveTo(x, y + w); ctx.lineTo(x, y); }
+                });
+                ctx.stroke(); ctx.shadowBlur = 0;
+                ctx.fillStyle = themeGoal; ctx.fillRect(goal.c * w + w*0.2, goal.r * w + w*0.2, w*0.6, w*0.6);
+            }
+            
+            // Draw Player - FORCE WHITE COLOR
+            ctx.fillStyle = "#fff";
+            ctx.font = `${(gameMode==='FLAPPY'?60:w*0.85)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            let px = (gameMode === 'RUSH' || gameMode === 'FLAPPY') ? player.x : player.c * w + w/2;
+            let py = gameMode === 'FLAPPY' ? player.y : (gameMode === 'RUSH' ? player.r * (canvas.height/3) + (canvas.height/6) : player.r * w + w/2);
+            
+            if (GOLDEN_EMOJIS.includes(selectedChar)) { ctx.shadowBlur = 20; ctx.shadowColor = "gold"; }
+            ctx.fillText(selectedChar, px, py); ctx.shadowBlur = 0;
+            
+            if (gameMode === 'FLAPPY') {
+                ctx.fillStyle = "#fff"; ctx.font = "bold 24px sans-serif";
+                ctx.fillText(`Pipes: ${bordersPassed}/10`, canvas.width/2, 40);
+            }
+        }
+
+        function handleMove(dir) {
+            if (!['RANDOM', 'CAMPAIGN', 'RUSH', 'FLAPPY'].includes(gameMode)) return;
+            if (gameMode === 'FLAPPY') {
+                player.v = -7.5; 
+            } else if (gameMode === 'RUSH') {
+                if (dir === 'up' && player.r > 0) player.r--;
+                if (dir === 'down' && player.r < 2) player.r++;
+                if (dir === 'right') player.x += 80;
+            } else {
+                let c = grid[idx(player.c, player.r)];
+                if (dir === 'up' && !c.walls[0]) player.r--;
+                if (dir === 'right' && !c.walls[1]) player.c++;
+                if (dir === 'down' && !c.walls[2]) player.r++;
+                if (dir === 'left' && !c.walls[3]) player.c--;
+                if (player.c === goal.c && player.r === goal.r) winGame();
+            }
+            playEmojiSound(selectedChar);
+        }
+
+        function winGame(rushReward) {
+            let r = rushReward || (gameMode === 'RANDOM' ? 100 : [0,40,120,300,600,1500][currentLevel]);
+            coins += r; gameMode = 'WON'; hideAllScreens(); saveState();
+            winScreen.style.display = 'block'; document.getElementById('reward-amt').innerText = r;
+            document.getElementById('win-buttons').innerHTML = (activeModeType === 'CAMPAIGN' && currentLevel < 5) ? `<button onclick="startLevel(${currentLevel+1})">Next Level</button>` : `<button onclick="showMainMenu()">Menu</button>`;
+        }
+
+        function loseGame(h, t) {
+            gameMode = 'LOST'; hideAllScreens();
+            document.getElementById('lose-header').innerText = h; document.getElementById('lose-text').innerText = t;
+            loseScreen.style.display = 'block';
+        }
+
+        function retryGame() { if (activeModeType === 'RANDOM') startRandom(); else if (activeModeType === 'RUSH') startRush(); else if (activeModeType === 'FLAPPY') startFlappy(); else startLevel(currentLevel); }
+
+        let tX = 0, tY = 0;
+        window.addEventListener('touchstart', e => { 
+            tX = e.touches[0].clientX; tY = e.touches[0].clientY; 
+            if(gameMode === 'FLAPPY') handleMove('jump');
+        }, {passive: false});
+        window.addEventListener('touchmove', e => { if (['RANDOM', 'CAMPAIGN', 'RUSH', 'FLAPPY'].includes(gameMode)) e.preventDefault(); }, {passive: false});
+        window.addEventListener('touchend', e => {
+            if(gameMode === 'FLAPPY') return;
+            let dx = e.changedTouches[0].clientX - tX, dy = e.changedTouches[0].clientY - tY;
+            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+                if (Math.abs(dx) > Math.abs(dy)) handleMove(dx > 0 ? 'right' : 'left');
+                else handleMove(dy > 0 ? 'down' : 'up');
+            }
+        });
+        window.addEventListener('keydown', e => {
+            if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') handleMove('up');
+            if (e.key === 'ArrowRight' || e.key === 'd') handleMove('right');
+            if (e.key === 'ArrowDown' || e.key === 's') handleMove('down');
+            if (e.key === 'ArrowLeft' || e.key === 'a') handleMove('left');
+        });
+
+        saveState(); requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
