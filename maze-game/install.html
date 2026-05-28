@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Install Maze Escape - One Click</title>
+    <title>Install Maze Escape</title>
     <style>
         body {
             margin: 0;
@@ -62,7 +62,7 @@
         <h1>🏆 MAZE ESCAPE 🏆</h1>
         <div class="game-icon">🎮</div>
         <button class="install-btn" id="installBtn">
-            📲 INSTALL GAME 📲
+            📲 ONE CLICK INSTALL 📲
         </button>
         <div class="status" id="status"></div>
     </div>
@@ -72,36 +72,30 @@
         const installBtn = document.getElementById('installBtn');
         const statusDiv = document.getElementById('status');
 
-        // Wait for app to be ready to install
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            statusDiv.innerHTML = '✅ Ready to install! Click the button above.';
+            statusDiv.innerHTML = '✅ Ready! Click INSTALL';
         });
 
-        // ONE CLICK INSTALL
         installBtn.addEventListener('click', async () => {
             if (deferredPrompt) {
-                // Show install prompt
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                
                 if (outcome === 'accepted') {
-                    statusDiv.innerHTML = '✅ Installing... Check your home screen!';
+                    statusDiv.innerHTML = '✅ Installed! Check your home screen!';
                 } else {
                     statusDiv.innerHTML = '❌ Installation cancelled';
                 }
                 deferredPrompt = null;
             } else {
-                statusDiv.innerHTML = '📱 Tap the 3 dots menu → "Install App"';
+                statusDiv.innerHTML = '📱 Tap 3 dots → "Install App"';
             }
         });
 
-        // Check if already installed
         if (window.matchMedia('(display-mode: standalone)').matches) {
-            statusDiv.innerHTML = '✅ Game is already installed!';
+            statusDiv.innerHTML = '✅ Already installed!';
             installBtn.disabled = true;
-            installBtn.style.opacity = '0.5';
         }
     </script>
 </body>
