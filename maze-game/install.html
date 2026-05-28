@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Install Maze Escape</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #000000 0%, #1a0000 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .install-container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(0,0,0,0.9);
+            border-radius: 30px;
+            border: 2px solid #FFD700;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(255,215,0,0.3);
+        }
+
+        h1 {
+            color: #FFD700;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5);
+        }
+
+        .game-icon {
+            font-size: 120px;
+            margin: 20px 0;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .install-btn {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+            color: #000;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px 0;
+            width: 100%;
+            transition: transform 0.2s;
+            box-shadow: 0 0 30px rgba(255,215,0,0.5);
+        }
+
+        .install-btn:active {
+            transform: scale(0.95);
+        }
+
+        .steps {
+            text-align: left;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .steps h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+
+        .steps p {
+            color: #ccc;
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            background: #FFD700;
+            color: #000;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .feature {
+            background: rgba(255,215,0,0.1);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            color: #FFD700;
+        }
+
+        .url {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 10px;
+            font-family: monospace;
+            color: #00f2ff;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+
+        button {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #FFD700;
+            color: #FFD700;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status.success {
+            background: rgba(0,255,0,0.2);
+            border: 1px solid #0f0;
+            color: #0f0;
+            display: block;
+        }
+
+        .status.error {
+            background: rgba(255,0,0,0.2);
+            border: 1px solid #f00;
+            color: #f00;
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .install-container {
+                padding: 30px 20px;
+            }
+            h1 { font-size: 1.8rem; }
+            .install-btn { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-container">
+        <h1>🏆 MAZE ESCAPE 🏆</h1>
+        <div class="game-icon">🎮</div>
+        
+        <button class="install-btn" id="installBtn">
+            📲 INSTALL GAME 📲
+        </button>
+
+        <div class="steps">
+            <h3>✨ How to Install:</h3>
+            <p><span class="step-number">1</span> Click the INSTALL button above</p>
+            <p><span class="step-number">2</span> Tap "Install" or "Add to Home Screen"</p>
+            <p><span class="step-number">3</span> Play offline anytime! 🎯</p>
+        </div>
+
+        <div class="features">
+            <div class="feature">🎮 5 Game Modes</div>
+            <div class="feature">💰 Collect Coins</div>
+            <div class="feature">👑 Unlock Characters</div>
+            <div class="feature">⚡ Works Offline</div>
+        </div>
+
+        <div class="url">
+            🌐 maze-escape-999.onrender.com
+        </div>
+
+        <div id="status"></div>
+        
+        <button onclick="window.location.href='/'" style="margin-top: 20px;">
+            🎮 Play Now
+        </button>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        const statusDiv = document.getElementById('status');
+
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('✅ App can be installed');
+            
+            // Show install button with indicator
+            installBtn.style.animation = 'pulse 0.5s ease';
+            statusDiv.innerHTML = '✅ Ready to install!';
+            statusDiv.className = 'status success';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 2000);
+        });
+
+        // Handle install button click
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                // Fallback for browsers that don't support beforeinstallprompt
+                statusDiv.innerHTML = 'ℹ️ Tap the 3 dots menu → "Install App" or "Add to Home Screen"';
+                statusDiv.className = 'status';
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = 'rgba(255,215,0,0.2)';
+                statusDiv.style.border = '1px solid #FFD700';
+                statusDiv.style.color = '#FFD700';
+                return;
+            }
+            
+            // Show install prompt
+            deferredPrompt.prompt();
+            
+            // Wait for user response
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                statusDiv.innerHTML = '✅ Installing Maze Escape! Check your home screen! 🎮';
+                statusDiv.className = 'status success';
+            } else {
+                statusDiv.innerHTML = '❌ Installation cancelled. You can still play in browser!';
+                statusDiv.className = 'status error';
+            }
+            
+            deferredPrompt = null;
+        });
+
+        // Check if already installed
+        window.addEventListener('appinstalled', () => {
+            statusDiv.innerHTML = '✅ Maze Escape installed successfully! 🎉';
+            statusDiv.className = 'status success';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        });
+
+        // Detect if running as PWA
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            statusDiv.innerHTML = '🎮 Maze Escape is already installed! Enjoy!';
+            statusDiv.className = 'status success';
+            installBtn.style.opacity = '0.5';
+            installBtn.disabled = true;
+            installBtn.textContent = '✓ ALREADY INSTALLED ✓';
+        }
+    </script>
+</body>
+</html>
